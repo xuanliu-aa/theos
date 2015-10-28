@@ -192,6 +192,11 @@ ifeq ($(call __theos_bool,$(or $(FORCE_COLOR),$(_THEOS_FALSE))),$(_THEOS_TRUE))
 	_THEOS_INTERNAL_LDFLAGS += -fcolor-diagnostics
 endif
 
+ifeq ($(call __theos_bool,$(or $(STRICT),$(_THEOS_TRUE))),$(_THEOS_TRUE))
+	_THEOS_INTERNAL_CFLAGS += -DOBJC_OLD_DISPATCH_PROTOTYPES=0 -fasm-blocks -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -fmessage-length=0 -fno-common -fobjc-abi-version=2 -fobjc-legacy-dispatch -fpascal-strings -fstrict-aliasing -Wbool-conversion -Wconditional-uninitialized -Wconstant-conversion -Wdeprecated-declarations -Wduplicate-method-match -Wempty-body -Wenum-conversion -Werror=deprecated-objc-isa-usage -Werror=non-modular-include-in-framework-module -Werror=objc-root-class -Werror=return-type -Wint-conversion -Wno-arc-repeated-use-of-weak -Wno-conversion -Wno-deprecated-implementations -Wno-four-char-constants -Wno-implicit-atomic-properties -Wno-missing-braces -Wno-missing-field-initializers -Wno-missing-prototypes -Wno-newline-eof -Wno-selector -Wno-shadow -Wno-sign-conversion -Wno-strict-selector-match -Wno-trigraphs -Wno-unknown-pragmas -Wno-unused-label -Wno-unused-parameter -Wnon-modular-include-in-framework-module -Wparentheses -Wpointer-sign -Wprotocol -Wshorten-64-to-32 -Wswitch -Wunreachable-code -Wunused-function -Wunused-value -Wunused-variable
+	# -Wundeclared-selector
+endif
+
 THEOS_BUILD_DIR ?= .
 
 ifneq ($(_THEOS_CLEANED_SCHEMA_SET),)
