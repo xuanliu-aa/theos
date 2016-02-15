@@ -1,21 +1,21 @@
 __THEOS_RULES_MK_VERSION := 1k
 ifneq ($(__THEOS_RULES_MK_VERSION),$(__THEOS_COMMON_MK_VERSION))
 all::
-	@$(PRINT_FORMAT_ERROR) "Theos version mismatch! common.mk [version $(or $(__THEOS_COMMON_MK_VERSION),0)] loaded in tandem with rules.mk [version $(or $(__THEOS_RULES_MK_VERSION),0)] Check that \$$\(THEOS\) is set properly!" >&2
+	@echo "Theos version mismatch! common.mk [version $(or $(__THEOS_COMMON_MK_VERSION),0)] loaded in tandem with rules.mk [version $(or $(__THEOS_RULES_MK_VERSION),0)] Check that \$$\(THEOS\) is set properly!" >&2
 	@exit 1
 endif
 
 .PHONY: all before-all internal-all after-all \
 	clean before-clean internal-clean after-clean update-theos
 ifeq ($(THEOS_BUILD_DIR),.)
-all:: before-all internal-all after-all
+all:: $(_THEOS_BUILD_SESSION_FILE) before-all internal-all after-all
 else
-all:: $(THEOS_BUILD_DIR) before-all internal-all after-all
+all:: $(THEOS_BUILD_DIR) $(_THEOS_BUILD_SESSION_FILE) before-all internal-all after-all
 endif
 
 clean:: before-clean internal-clean after-clean
 
-do:: package install
+do:: all package install
 
 before-all::
 ifneq ($(SYSROOT),)
@@ -29,11 +29,14 @@ after-all::
 before-clean::
 
 internal-clean::
+	$(ECHO_CLEANING)rm -rf "$(THEOS_OBJ_DIR)"$(ECHO_END)
+
+ifeq ($(shell [ -f "$(_THEOS_BUILD_SESSION_FILE)" ] && echo 1),1)
+	$(ECHO_NOTHING)rm "$(_THEOS_BUILD_SESSION_FILE)"$(ECHO_END)
+endif
+
 ifeq ($(MAKELEVEL),0)
-	$(ECHO_CLEANING)rm -rf "$(THEOS_OBJ_DIR)"$(ECHO_END)
 	$(ECHO_NOTHING)rm -rf "$(THEOS_STAGING_DIR)"$(ECHO_END)
-else
-	$(ECHO_CLEANING)rm -rf "$(THEOS_OBJ_DIR)"$(ECHO_END)
 endif
 
 after-clean::
@@ -57,6 +60,13 @@ internal-clean-packages::
 	$(ECHO_NOTHING)rm -rf $(THEOS_PACKAGE_DIR)/$(THEOS_PACKAGE_NAME)-*-*.$(THEOS_PACKAGE_ARCH).rpm$(ECHO_END)
 
 after-clean-packages::
+
+$(_THEOS_BUILD_SESSION_FILE):
+	@mkdir -p $(_THEOS_LOCAL_DATA_DIR)
+
+ifeq ($(shell [ -f "$(_THEOS_BUILD_SESSION_FILE)" ] || echo 0),0)
+	@touch $(_THEOS_BUILD_SESSION_FILE)
+endif
 
 .PRECIOUS: %.variables %.subprojects
 
@@ -119,20 +129,22 @@ if [ "$(__SUBPROJECTS)" != "" ]; then \
 
 update-theos::
 	@if [ ! -d "$(THEOS)/.git" ]; then \
-		$(PRINT_FORMAT_ERROR) "$(THEOS) is not a Git repository. For more information, refer to https://github.com/kirb/theos/wiki/Installation#updating." >&2; \
+		$(PRINT_FORMAT_ERROR) "$(THEOS) is not a Git repository. For more information, refer to https://github.com/theos/theos/wiki/Installation#updating." >&2; \
 		exit 1; \
 	fi
 
 	@cd $(THEOS) && git pull origin master && ./git-submodule-recur.sh init
 
 troubleshoot::
-	@$(PRINT_FORMAT_WARNING) "Be sure to check the troubleshooting page at https://github.com/kirb/theos/wiki/Troubleshooting first."
-	@$(PRINT_FORMAT_WARNING) "For support with build errors, ask on IRC: http://iphonedevwiki.net/index.php/IRC. If you think you've found a bug in Theos, check the issue tracker at https://github.com/kirb/theos/issues."
+	@$(PRINT_FORMAT) "Be sure to check the troubleshooting page at https://github.com/theos/theos/wiki/Troubleshooting first."
+	@$(PRINT_FORMAT) "For support with build errors, ask on IRC: http://iphonedevwiki.net/index.php/IRC. If you think you've found a bug in Theos, check the issue tracker at https://github.com/theos/theos/issues."
+	@echo
 
 ifeq ($(call __executable,ghost),$(_THEOS_TRUE))
-	$(MAKE) -f $(_THEOS_PROJECT_MAKEFILE_NAME) --no-print-directory --no-keep-going clean all messages=yes FORCE_COLOR=yes 2>&1 | ghost - ansi
+	@$(PRINT_FORMAT) "Creating a Ghostbin containing the output of \`make clean all messages=yes\`…"
+	$(MAKE) -f $(_THEOS_PROJECT_MAKEFILE_NAME) --no-print-directory --no-keep-going clean all messages=yes FORCE_COLOR=yes 2>&1 | ghost -x 2w - ansi
 else
-	@$(PRINT_FORMAT_ERROR) "You don't have ghost installed. For more information, refer to https://github.com/kirb/theos/wiki/Installation#prerequisites."
+	@$(PRINT_FORMAT_ERROR) "You don't have ghost installed. For more information, refer to https://github.com/theos/theos/wiki/Installation#prerequisites." >&2; exit 1
 endif
 
 $(eval $(call __mod,master/rules.mk))
